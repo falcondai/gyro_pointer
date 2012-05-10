@@ -53,7 +53,9 @@ public class PointerActivity extends Activity {
 				// setup socket
 				try {
 					// TODO select host
+					
 					// TODO support bluetooth TCP socket
+					
 //					HOST = InetAddress.getByName("10.150.9.25");
 					HOST = InetAddress.getByName("192.168.1.11");
 					ds = new DatagramSocket();
@@ -87,7 +89,6 @@ public class PointerActivity extends Activity {
 			}
 		}, "UdpThread");
 
-		// TODO solve hiccups due to GC
 		// nt.setPriority(Thread.MAX_PRIORITY);
 		nt.start();
 
@@ -98,7 +99,6 @@ public class PointerActivity extends Activity {
 	class RotationVectorListener implements SensorEventListener {
 		private long t = 0;
 		private long mt = 0;
-//		private byte[] buf = new byte[8 + 3 * 4];
 //		private String info_text;
 		
 		public long getLatestTimestamp() {
