@@ -1,6 +1,7 @@
 import socket
 import time
 import struct
+import math
 import win32api
 import win32con
 
@@ -22,6 +23,8 @@ def main():
 	W = win32api.GetSystemMetrics(0)
 	H = win32api.GetSystemMetrics(1)
 	# TODO make configurations adjustable
+	HR = 0.3
+	VR = float(H) / float(W) * HR
 	while True:
 		data, addr = srv.recvfrom(20)
 		# print 'From', addr, ':', data
@@ -36,7 +39,7 @@ def main():
 			rt = time.clock()
 			uf = 1.0 / (rt - lt)
 			lt = rt
-			# print 'Update frequency:', uf
+			print 'Update frequency:', uf
 			print x, y, z
 			
 			# convert the raw phone rot state to cursor position
@@ -46,11 +49,16 @@ def main():
 			ya = [[0.0],[1.0],[0.0]]
 			xa = [[1.0],[0.0],[0.0]]
 			ty = mmulti(rot, ya)
+			
 			tx = mmulti(rot, xa)
-			print ty
-			print tx
-			cx = ty[0][0] * W + W / 2.0
-			cy = -ty[2][0] * H + H / 2.0
+			yrv = v3cross(ya, ty)
+			sx = mmulti(rv_to_rot(yrv[0][0], yrv[1][0], yrv[2][0]), xa)
+			
+			
+			# print ty
+			# print tx
+			cx = ty[0][0] * W / 2.0 / HR + W / 2.0
+			cy = -ty[2][0] * H / 2.0 / VR + H / 2.0
 			print 'cursor position:', cx, cy
 			win32api.SetCursorPos((int(cx), int(cy)))
 
@@ -101,6 +109,27 @@ def rv_to_rot(x, y, z):
 		[2*xz-2*yw, 2*yz+2*xw, 1-2*xx-2*yy]
 	]
 	return rot
+
+def vdot(a, b):
+	if len(a) != len(b):
+		return None
+		
+	s = 0.0f
+	for i in range(len(a)):
+		s += a[i][0] * b[i][0]
+	return s
+	
+def v3cross(a, b):
+	ax = a[0][0]
+	ay = a[1][0]
+	az = a[2][0]
+	bx = b[0][0]
+	by = b[1][0]
+	bz = b[2][0]
+	return [[ay*bz-az*by], [az*bx-ax*bz], [ax*by-ay*bx]]
+
+def rv(x, y, z, theta):
+	return [[x * math.sin(theta/2.0)], [y * math.sin(theta/2.0)], [z * math.sin(theta/2.0)]]
 	
 if __name__ == '__main__':
 	main()

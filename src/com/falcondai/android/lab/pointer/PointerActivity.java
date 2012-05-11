@@ -10,6 +10,8 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.PowerManager;
+import android.os.PowerManager.WakeLock;
 import android.util.Log;
 import android.widget.TextView;
 
@@ -27,6 +29,9 @@ public class PointerActivity extends Activity {
 	private byte[] msg = new byte[8 + 3 * 4];
 	private DatagramPacket dp = new DatagramPacket(msg, msg.length);
 
+	private PowerManager pm;
+	private WakeLock wl;
+	
 	private Thread nt;
 	private boolean end_nt;
 
@@ -45,6 +50,9 @@ public class PointerActivity extends Activity {
 		// versions of android)
 		rv = sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
 
+		pm = (PowerManager) getSystemService(POWER_SERVICE);
+		wl = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, tag);
+		
 		// network thread
 		nt = new Thread(new Runnable() {
 			@Override
@@ -56,8 +64,8 @@ public class PointerActivity extends Activity {
 					
 					// TODO support bluetooth TCP socket
 					
-//					HOST = InetAddress.getByName("10.150.9.25");
-					HOST = InetAddress.getByName("192.168.1.11");
+					HOST = InetAddress.getByName("10.150.13.26");
+//					HOST = InetAddress.getByName("192.168.1.11");
 					ds = new DatagramSocket();
 					// InetAddress ia = InetAddress.getByName("192.168.1.255");
 					// ds.setBroadcast(true);
@@ -144,6 +152,7 @@ public class PointerActivity extends Activity {
 		super.onResume();
 
 		sm.registerListener(rv_sel, rv, SensorManager.SENSOR_DELAY_FASTEST);
+		wl.acquire();
 	}
 
 	@Override
@@ -151,6 +160,7 @@ public class PointerActivity extends Activity {
 		super.onPause();
 
 		sm.unregisterListener(rv_sel);
+		wl.release();
 	}
 
 	@Override
