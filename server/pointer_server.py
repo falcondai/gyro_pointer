@@ -25,6 +25,8 @@ def main():
 	# TODO make configurations adjustable
 	HR = 0.3
 	VR = float(H) / float(W) * HR
+	# mouse state
+	lmd = True
 	while True:
 		data, addr = srv.recvfrom(20)
 		# print 'From', addr, ':', data
@@ -39,8 +41,8 @@ def main():
 			rt = time.clock()
 			uf = 1.0 / (rt - lt)
 			lt = rt
-			print 'Update frequency:', uf
-			print x, y, z
+			# print 'Update frequency:', uf
+			# print x, y, z
 			
 			# convert the raw phone rot state to cursor position
 			# TODO use inertia and resistance to smooth the motion
@@ -53,13 +55,21 @@ def main():
 			tx = mmulti(rot, xa)
 			yrv = v3cross(ya, ty)
 			sx = mmulti(rv_to_rot(yrv[0][0], yrv[1][0], yrv[2][0]), xa)
-			
-			
+			ytheta = math.acos(vdot(tx, sx))
+			print ytheta
+			if ytheta > math.pi / 4.0:
+				if not lmd:
+					win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+					lmd = True
+			elif lmd:
+				win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+				lmd = False
+				
 			# print ty
 			# print tx
 			cx = ty[0][0] * W / 2.0 / HR + W / 2.0
 			cy = -ty[2][0] * H / 2.0 / VR + H / 2.0
-			print 'cursor position:', cx, cy
+			print 'cursor position:', cx, cy, 'update frequency:', uf, 'ytheta:', ytheta
 			win32api.SetCursorPos((int(cx), int(cy)))
 
 def mmulti(a, b):
@@ -114,7 +124,7 @@ def vdot(a, b):
 	if len(a) != len(b):
 		return None
 		
-	s = 0.0f
+	s = 0.0
 	for i in range(len(a)):
 		s += a[i][0] * b[i][0]
 	return s
