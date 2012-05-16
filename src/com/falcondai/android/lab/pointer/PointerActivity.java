@@ -64,8 +64,8 @@ public class PointerActivity extends Activity {
 					
 					// TODO support bluetooth TCP socket
 					
-					HOST = InetAddress.getByName("10.150.13.26");
-//					HOST = InetAddress.getByName("192.168.1.11");
+//					HOST = InetAddress.getByName("10.150.13.26");
+					HOST = InetAddress.getByName("192.168.1.7");
 					ds = new DatagramSocket();
 					// InetAddress ia = InetAddress.getByName("192.168.1.255");
 					// ds.setBroadcast(true);
@@ -107,7 +107,7 @@ public class PointerActivity extends Activity {
 	class RotationVectorListener implements SensorEventListener {
 		private long t = 0;
 		private long mt = 0;
-//		private String info_text;
+		private String info_text;
 		
 		public long getLatestTimestamp() {
 			return t;
@@ -119,15 +119,15 @@ public class PointerActivity extends Activity {
 				t = se.timestamp;
 			}
 			mt = (se.timestamp - t > mt) ? se.timestamp - t : mt;
-//			 info_text = "timestamp: "+String.valueOf(se.timestamp)+'\n'
-//			 + String.valueOf(se.values[0])+'\n'
-//			 + String.valueOf(se.values[1])+'\n'
-//			 + String.valueOf(se.values[2])+'\n'
-//			 + "magnitude: " + String.valueOf(magnitude(se.values))+'\n'
-//			 + "update rate: "+ String.valueOf(1e9 / (se.timestamp - t))+"Hz\n"
-//			 + "maximum wait time: "+String.valueOf(mt/1e6)+"ms\n";
-
-//			 info.setText(info_text);
+			 info_text = "timestamp: "+String.valueOf(se.timestamp)+'\n'
+					 +"sys timestamp: "+String.valueOf(System.nanoTime())+'\n'
+			 + String.valueOf(se.values[0])+'\n'
+			 + String.valueOf(se.values[1])+'\n'
+			 + String.valueOf(se.values[2])+'\n'
+			 + "magnitude: " + String.valueOf(magnitude(se.values))+'\n'
+			 + "update rate: "+ String.valueOf(1e9 / (se.timestamp - t))+"Hz\n"
+			 + "maximum wait time: "+String.valueOf(mt/1e6)+"ms\n";
+			 info.setText(info_text);
 //			 Log.d(tag, sb.toString());
 
 			try {

@@ -2,6 +2,8 @@ import socket
 import time
 import struct
 import math
+
+# TODO wrap OS dependent functions into a class
 import win32api
 import win32con
 
@@ -26,7 +28,7 @@ def main():
 	HR = 0.3
 	VR = float(H) / float(W) * HR
 	# mouse state
-	lmd = True
+	# lmd = True
 	while True:
 		data, addr = srv.recvfrom(20)
 		# print 'From', addr, ':', data
@@ -56,15 +58,15 @@ def main():
 			yrv = v3cross(ya, ty)
 			sx = mmulti(rv_to_rot(yrv[0][0], yrv[1][0], yrv[2][0]), xa)
 			ytheta = math.acos(vdot(tx, sx))
-			print ytheta
-			if ytheta > math.pi / 4.0:
-				if not lmd:
-					win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-					lmd = True
-			elif lmd:
-				win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-				lmd = False
-				
+			
+			# if ytheta > math.pi / 4.0:
+				# if not lmd:
+					# win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+					# lmd = True
+			# elif lmd:
+				# win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+				# lmd = False
+			
 			# print ty
 			# print tx
 			cx = ty[0][0] * W / 2.0 / HR + W / 2.0
