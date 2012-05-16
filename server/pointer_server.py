@@ -21,14 +21,19 @@ def main():
 	lt = time.clock()
 	# reception/update frequency
 	uf = 0.0
+	
 	# screen resolution
 	W = win32api.GetSystemMetrics(0)
 	H = win32api.GetSystemMetrics(1)
+	
 	# TODO make configurations adjustable
 	HR = 0.3
 	VR = float(H) / float(W) * HR
-	# mouse state
-	# lmd = True
+	
+	# facing the screen the RH coordinate system where x points to the right
+	# and y points into the screen.
+	SCREEN_ORIENTATION = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+	orientation_reset = True;
 	
 	# handle messages
 	while True:
@@ -58,19 +63,17 @@ def main():
 				rot = rv_to_rot(x, y, z)
 				ya = [[0.0],[1.0],[0.0]]
 				xa = [[1.0],[0.0],[0.0]]
-				ty = mmulti(rot, ya)
+				ty = mmultiply(SCREEN_ORIENTATION, mmultiply(rot, ya))
 				
-				# tx = mmulti(rot, xa)
-				# yrv = v3cross(ya, ty)
-				# sx = mmulti(rv_to_rot(yrv[0][0], yrv[1][0], yrv[2][0]), xa)
-				# ytheta = math.acos(vdot(tx, sx))
-								
-				# print ty
-				# print tx
-				cx = ty[0][0] * W / 2.0 / HR + W / 2.0
-				cy = -ty[2][0] * H / 2.0 / VR + H / 2.0
-				# print 'cursor position:', cx, cy, 'update frequency:', uf
-				win32api.SetCursorPos((int(cx), int(cy)))
+				if orientation_reset:
+					SCREEN_ORIENTATION = mtranspose(rot)
+					orientation_reset = False
+				elif ty[1][0] > 0.0:
+					# facing the screen
+					cx = ty[0][0] * W / 2.0 / HR + W / 2.0
+					cy = -ty[2][0] * H / 2.0 / VR + H / 2.0
+					# print 'cursor position:', cx, cy, 'update frequency:', uf
+					win32api.SetCursorPos((int(cx), int(cy)))
 			
 			elif data[8:12] == '\x00\x00\x00\x40':
 				# mouse button event message
@@ -80,7 +83,13 @@ def main():
 				print 'mouse button event:', button, state
 				
 				handle_mouse_button_event(button, state)
-
+			
+			elif data[8:12] == '\x00\x00\x40\x40':
+				# orientation reset message
+				
+				print 'reset orientation'
+				orientation_reset = True
+				
 				
 def handle_mouse_button_event(button, state):
 	if button == 0:
@@ -99,7 +108,7 @@ def handle_mouse_button_event(button, state):
 		else:
 			win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, 0, 0)
 
-def mmulti(a, b):
+def mmultiply(a, b):
 	if len(a[0]) != len(b):
 		return None
 	

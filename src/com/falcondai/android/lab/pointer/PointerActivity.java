@@ -192,6 +192,8 @@ public class PointerActivity extends Activity {
 	public void onResume() {
 		super.onResume();
 
+		// reset orientation
+		packageOrientationResetEvent(dp);
 		sm.registerListener(rv_sel, rv, SensorManager.SENSOR_DELAY_FASTEST);
 		wl.acquire();
 	}
@@ -237,6 +239,15 @@ public class PointerActivity extends Activity {
 		buf[8] = 0x00; buf[9] = 0x00; buf[10] = 0x00; buf[11] = 0x40;
 		writeByteBuffer(buf, 12, button);
 		writeByteBuffer(buf, 16, state);
+		
+		ct = timestamp;
+	}
+	
+	protected void packageOrientationResetEvent(DatagramPacket packet) {
+		byte[] buf = packet.getData();
+		long timestamp = System.nanoTime();
+		writeByteBuffer(buf, 0, timestamp);
+		buf[8] = 0x00; buf[9] = 0x00; buf[10] = 0x40; buf[11] = 0x40;
 		
 		ct = timestamp;
 	}

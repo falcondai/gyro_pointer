@@ -36,7 +36,7 @@ utilizing the fact that for a rotation vector (x sin(theta/2), y sin(theta/2), z
 Message Types and Payload Design:
 	Rotation vector state: float x, float y, float z (each 4 bytes)
 	Mouse button event: float type = 2.0f (0x00, 0x00, 0x00, 0x40), int button (0 left, 1 middle, 2 right), int state (>0 UP otherwise DOWN)
-	
+	Orientation reset: float type = 3.0f (0x00, 0x00, 0x40, 0x40)
 
 Gesture Design:
 Pointer-like mapping of orientation to cursor position.
