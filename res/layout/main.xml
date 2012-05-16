@@ -16,21 +16,21 @@
         android:layout_marginBottom="20dp" >
 
         <Button
-            android:id="@+id/button1"
+            android:id="@+id/lmb"
             android:layout_width="0dp"
             android:layout_height="fill_parent"
             android:layout_weight="1"
             android:text="L" />
 
         <Button
-            android:id="@+id/button2"
+            android:id="@+id/mmb"
             android:layout_width="0dp"
             android:layout_height="fill_parent"
             android:layout_weight="1"
             android:text="M" />
 
         <Button
-            android:id="@+id/button3"
+            android:id="@+id/rmb"
             android:layout_width="0dp"
             android:layout_height="fill_parent"
             android:layout_weight="1"

@@ -29,11 +29,13 @@ def main():
 	VR = float(H) / float(W) * HR
 	# mouse state
 	# lmd = True
+	
+	# handle messages
 	while True:
 		data, addr = srv.recvfrom(20)
 		# print 'From', addr, ':', data
 
-		print 'From', addr, ':', struct.unpack('qfff', data)
+		# print 'From', addr, ':', struct.unpack('qfff', data)
 		t, x, y, z = struct.unpack('qfff', data)
 
 		if t > ct:
@@ -46,33 +48,56 @@ def main():
 			# print 'Update frequency:', uf
 			# print x, y, z
 			
-			# convert the raw phone rot state to cursor position
-			# TODO use inertia and resistance to smooth the motion
+			# detect message types
+			if x >= -1.0 and x <= 1.0:
+				# rotation vector state message
+				
+				# convert the raw phone rot state to cursor position
+				# TODO use inertia and resistance to smooth the motion
+				
+				rot = rv_to_rot(x, y, z)
+				ya = [[0.0],[1.0],[0.0]]
+				xa = [[1.0],[0.0],[0.0]]
+				ty = mmulti(rot, ya)
+				
+				# tx = mmulti(rot, xa)
+				# yrv = v3cross(ya, ty)
+				# sx = mmulti(rv_to_rot(yrv[0][0], yrv[1][0], yrv[2][0]), xa)
+				# ytheta = math.acos(vdot(tx, sx))
+								
+				# print ty
+				# print tx
+				cx = ty[0][0] * W / 2.0 / HR + W / 2.0
+				cy = -ty[2][0] * H / 2.0 / VR + H / 2.0
+				# print 'cursor position:', cx, cy, 'update frequency:', uf
+				win32api.SetCursorPos((int(cx), int(cy)))
 			
-			rot = rv_to_rot(x, y, z)
-			ya = [[0.0],[1.0],[0.0]]
-			xa = [[1.0],[0.0],[0.0]]
-			ty = mmulti(rot, ya)
-			
-			tx = mmulti(rot, xa)
-			yrv = v3cross(ya, ty)
-			sx = mmulti(rv_to_rot(yrv[0][0], yrv[1][0], yrv[2][0]), xa)
-			ytheta = math.acos(vdot(tx, sx))
-			
-			# if ytheta > math.pi / 4.0:
-				# if not lmd:
-					# win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-					# lmd = True
-			# elif lmd:
-				# win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-				# lmd = False
-			
-			# print ty
-			# print tx
-			cx = ty[0][0] * W / 2.0 / HR + W / 2.0
-			cy = -ty[2][0] * H / 2.0 / VR + H / 2.0
-			print 'cursor position:', cx, cy, 'update frequency:', uf, 'ytheta:', ytheta
-			win32api.SetCursorPos((int(cx), int(cy)))
+			elif data[8:12] == '\x00\x00\x00\x40':
+				# mouse button event message
+				
+				print data[12:20].split('\\')
+				button, state = struct.unpack('ii', data[12:20])
+				print 'mouse button event:', button, state
+				
+				handle_mouse_button_event(button, state)
+
+				
+def handle_mouse_button_event(button, state):
+	if button == 0:
+		if state > 0:
+			win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+		else:
+			win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+	elif button == 1:
+		if state > 0:
+			win32api.mouse_event(win32con.MOUSEEVENTF_MIDDLEUP, 0, 0)
+		else:
+			win32api.mouse_event(win32con.MOUSEEVENTF_MIDDLEDOWN, 0, 0)
+	elif button == 2:
+		if state > 0:
+			win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, 0, 0)
+		else:
+			win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, 0, 0)
 
 def mmulti(a, b):
 	if len(a[0]) != len(b):

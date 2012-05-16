@@ -31,6 +31,12 @@ Message Structure:
 8 bytes timestamp in long type
 12 bytes payload
 
+utilizing the fact that for a rotation vector (x sin(theta/2), y sin(theta/2), z sin(theta/2)), where (x, y, z) is a unit vecotr, each component is in [-1.0, 1.0], we can compactly encode other messages into the 12 bytes payload by avoiding the space taken up by rotation vectors.
+
+Message Types and Payload Design:
+	Rotation vector state: float x, float y, float z (each 4 bytes)
+	Mouse button event: float type = 2.0f (0x00, 0x00, 0x00, 0x40), int button (0 left, 1 middle, 2 right), int state (>0 UP otherwise DOWN)
+	
 
 Gesture Design:
 Pointer-like mapping of orientation to cursor position.

@@ -13,6 +13,10 @@ import android.os.Bundle;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.View.OnTouchListener;
+import android.widget.Button;
 import android.widget.TextView;
 
 public class PointerActivity extends Activity {
@@ -28,6 +32,7 @@ public class PointerActivity extends Activity {
 	private DatagramSocket ds;
 	private byte[] msg = new byte[8 + 3 * 4];
 	private DatagramPacket dp = new DatagramPacket(msg, msg.length);
+	private long ct = 0L;
 
 	private PowerManager pm;
 	private WakeLock wl;
@@ -84,7 +89,6 @@ public class PointerActivity extends Activity {
 						break;
 					}
 					
-					long ct = rv_sel.getLatestTimestamp();
 					if (ct > lt) {
 						try {
 							ds.send(dp);
@@ -102,12 +106,49 @@ public class PointerActivity extends Activity {
 
 		// TODO rewrite the sensor acquisition with NDK
 		rv_sel = new RotationVectorListener();
+		
+		// register mouse buttons' listeners
+		((Button) findViewById(R.id.lmb)).setOnTouchListener(
+				new OnTouchListener() {
+					public boolean onTouch(View v, MotionEvent me) {
+						if (me.getActionMasked() == MotionEvent.ACTION_DOWN) {
+							packageMouseButtonEvent(0, 0, dp);
+						} else if (me.getActionMasked() == MotionEvent.ACTION_UP) {
+							packageMouseButtonEvent(0, 1, dp);
+						}
+						return false;
+					}
+				});
+		
+		((Button) findViewById(R.id.mmb)).setOnTouchListener(
+				new OnTouchListener() {
+					public boolean onTouch(View v, MotionEvent me) {
+						if (me.getActionMasked() == MotionEvent.ACTION_DOWN) {
+							packageMouseButtonEvent(1, 0, dp);
+						} else if (me.getActionMasked() == MotionEvent.ACTION_UP) {
+							packageMouseButtonEvent(1, 1, dp);
+						}
+						return false;
+					}
+				});
+		
+		((Button) findViewById(R.id.rmb)).setOnTouchListener(
+				new OnTouchListener() {
+					public boolean onTouch(View v, MotionEvent me) {
+						if (me.getActionMasked() == MotionEvent.ACTION_DOWN) {
+							packageMouseButtonEvent(2, 0, dp);
+						} else if (me.getActionMasked() == MotionEvent.ACTION_UP) {
+							packageMouseButtonEvent(2, 1, dp);
+						}
+						return false;
+					}
+				});
 	}
 
 	class RotationVectorListener implements SensorEventListener {
 		private long t = 0;
 		private long mt = 0;
-		private String info_text;
+//		private String info_text;
 		
 		public long getLatestTimestamp() {
 			return t;
@@ -119,16 +160,16 @@ public class PointerActivity extends Activity {
 				t = se.timestamp;
 			}
 			mt = (se.timestamp - t > mt) ? se.timestamp - t : mt;
-			 info_text = "timestamp: "+String.valueOf(se.timestamp)+'\n'
-					 +"sys timestamp: "+String.valueOf(System.nanoTime())+'\n'
-			 + String.valueOf(se.values[0])+'\n'
-			 + String.valueOf(se.values[1])+'\n'
-			 + String.valueOf(se.values[2])+'\n'
-			 + "magnitude: " + String.valueOf(magnitude(se.values))+'\n'
-			 + "update rate: "+ String.valueOf(1e9 / (se.timestamp - t))+"Hz\n"
-			 + "maximum wait time: "+String.valueOf(mt/1e6)+"ms\n";
-			 info.setText(info_text);
-//			 Log.d(tag, sb.toString());
+//			info_text = "timestamp: "+String.valueOf(se.timestamp)+'\n'
+//					+"sys timestamp: "+String.valueOf(System.nanoTime())+'\n'
+//					+ String.valueOf(se.values[0])+'\n'
+//					+ String.valueOf(se.values[1])+'\n'
+//					+ String.valueOf(se.values[2])+'\n'
+//					+ "magnitude: " + String.valueOf(magnitude(se.values))+'\n'
+//					+ "update rate: "+ String.valueOf(1e9 / (se.timestamp - t))+"Hz\n"
+//					+ "maximum wait time: "+String.valueOf(mt/1e6)+"ms\n";
+//			info.setText(info_text);
+//			Log.d(tag, sb.toString());
 
 			try {
 				// package the sensor event
@@ -185,8 +226,21 @@ public class PointerActivity extends Activity {
 		writeByteBuffer(buf, 8, se.values[0]);
 		writeByteBuffer(buf, 12, se.values[1]);
 		writeByteBuffer(buf, 16, se.values[2]);
+		
+		ct = se.timestamp;
 	}
 
+	protected void packageMouseButtonEvent(int button, int state, DatagramPacket packet) {
+		byte[] buf = packet.getData();
+		long timestamp = System.nanoTime();
+		writeByteBuffer(buf, 0, timestamp);
+		buf[8] = 0x00; buf[9] = 0x00; buf[10] = 0x00; buf[11] = 0x40;
+		writeByteBuffer(buf, 12, button);
+		writeByteBuffer(buf, 16, state);
+		
+		ct = timestamp;
+	}
+	
 	protected void writeByteBuffer(byte[] buf, int offset, long n) {
 		if (offset + 8 > buf.length) {
 			// the buffer is not big enough for the data
@@ -195,6 +249,18 @@ public class PointerActivity extends Activity {
 		}
 
 		for (int i = 0; i < 8; i++) {
+			buf[offset + i] = (byte) ((n >>> i * 8) & 0xff);
+		}
+	}
+	
+	protected void writeByteBuffer(byte[] buf, int offset, int n) {
+		if (offset + 4 > buf.length) {
+			// the buffer is not big enough for the data
+			// TODO throws an exception
+			return;
+		}
+
+		for (int i = 0; i < 4; i++) {
 			buf[offset + i] = (byte) ((n >>> i * 8) & 0xff);
 		}
 	}
