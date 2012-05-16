@@ -3,10 +3,36 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent" >
 
+    <LinearLayout
+        android:id="@+id/address_bar"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true" >
+
+        <EditText
+            android:id="@+id/host_text"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:layout_weight="1"
+            android:ems="10"
+            android:hint="Host IP address"
+            android:text="192.168.1.7" />
+
+        <Button
+            android:id="@+id/connect_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Connect" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/info"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/address_bar"
         android:text="Setting up..." />
 
     <LinearLayout

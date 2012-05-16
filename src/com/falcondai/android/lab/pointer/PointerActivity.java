@@ -15,8 +15,11 @@ import android.os.PowerManager.WakeLock;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 
 public class PointerActivity extends Activity {
@@ -39,8 +42,12 @@ public class PointerActivity extends Activity {
 	
 	private Thread nt;
 	private boolean end_nt;
+	private boolean init_host = true;
 
 	private TextView info;
+	private EditText host_text;
+	
+	private InputMethodManager imm;
 
 	/** Called when the activity is first created. */
 	@Override
@@ -49,7 +56,8 @@ public class PointerActivity extends Activity {
 
 		setContentView(R.layout.main);
 		info = (TextView) findViewById(R.id.info);
-
+		host_text = (EditText) findViewById(R.id.host_text);
+		
 		sm = (SensorManager) getSystemService(SENSOR_SERVICE);
 		// TODO provide support for gyroscope (rotation vector is flawed in early
 		// versions of android)
@@ -58,38 +66,48 @@ public class PointerActivity extends Activity {
 		pm = (PowerManager) getSystemService(POWER_SERVICE);
 		wl = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, tag);
 		
+		imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+		
 		// network thread
 		nt = new Thread(new Runnable() {
 			@Override
 			public void run() {
 				long lt = 0;
-				// setup socket
-				try {
-					// TODO select host
-					
-					// TODO support bluetooth TCP socket
-					
-//					HOST = InetAddress.getByName("10.150.13.26");
-					HOST = InetAddress.getByName("192.168.1.7");
-					ds = new DatagramSocket();
-					// InetAddress ia = InetAddress.getByName("192.168.1.255");
-					// ds.setBroadcast(true);
-					ds.connect(HOST, PORT);
-					Log.d(tag,
-							"Socket is bound to "
-									+ String.valueOf(ds.getLocalPort()));
-					info.setText("Running...");
-				} catch (Exception e) {
-					e.printStackTrace();
-					Log.e(tag, "Failed to make a socket.");
-				}
+
 				while (true) {
+					if (init_host) {
+						// setup socket
+						try {
+							// TODO select host
+							
+							// TODO support bluetooth TCP socket
+							
+							HOST = InetAddress.getByName(host_text.getText().toString());
+							ds = new DatagramSocket();
+							ds.connect(HOST, PORT);
+							Log.d(tag,
+									"Socket is bound to "
+											+ String.valueOf(ds.getLocalPort()));
+
+							Log.d(tag, "Connected to "+HOST.getHostName());
+						} catch (Exception e) {
+							e.printStackTrace();
+							Log.d(tag, "Failed to connect to "+host_text.getText().toString());
+							Log.e(tag, "Failed to make a socket.");
+						}
+						
+						init_host = false;
+						packageOrientationResetEvent(dp);
+					}
+					
 					if (end_nt) {
+						// end network thread
 						Log.d(tag, "Network thread ends.");
 						break;
 					}
 					
 					if (ct > lt) {
+						// there is a new packet
 						try {
 							ds.send(dp);
 							lt = ct;
@@ -99,7 +117,7 @@ public class PointerActivity extends Activity {
 					}
 				}
 			}
-		}, "UdpThread");
+		}, "NetworkThread");
 
 		// nt.setPriority(Thread.MAX_PRIORITY);
 		nt.start();
@@ -141,6 +159,15 @@ public class PointerActivity extends Activity {
 							packageMouseButtonEvent(2, 1, dp);
 						}
 						return false;
+					}
+				});
+		
+		// host address change
+		((Button) findViewById(R.id.connect_btn)).setOnClickListener(
+				new OnClickListener() {
+					public void onClick(View v) {
+						init_host = true;
+						imm.hideSoftInputFromWindow(v.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
 					}
 				});
 	}
@@ -193,7 +220,6 @@ public class PointerActivity extends Activity {
 		super.onResume();
 
 		// reset orientation
-		packageOrientationResetEvent(dp);
 		sm.registerListener(rv_sel, rv, SensorManager.SENSOR_DELAY_FASTEST);
 		wl.acquire();
 	}
