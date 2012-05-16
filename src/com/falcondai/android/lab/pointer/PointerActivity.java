@@ -73,7 +73,12 @@ public class PointerActivity extends Activity {
 			@Override
 			public void run() {
 				long lt = 0;
-
+				try {
+					ds = new DatagramSocket();
+				} catch (Exception e) {
+					Log.e(tag, "Failed to make a datagram socket.");
+					e.printStackTrace();
+				}
 				while (true) {
 					if (init_host) {
 						// setup socket
@@ -83,8 +88,8 @@ public class PointerActivity extends Activity {
 							// TODO support bluetooth TCP socket
 							
 							HOST = InetAddress.getByName(host_text.getText().toString());
-							ds = new DatagramSocket();
-							ds.connect(HOST, PORT);
+							dp.setAddress(HOST);
+							dp.setPort(PORT);
 							Log.d(tag,
 									"Socket is bound to "
 											+ String.valueOf(ds.getLocalPort()));
@@ -93,7 +98,6 @@ public class PointerActivity extends Activity {
 						} catch (Exception e) {
 							e.printStackTrace();
 							Log.d(tag, "Failed to connect to "+host_text.getText().toString());
-							Log.e(tag, "Failed to make a socket.");
 						}
 						
 						init_host = false;
@@ -102,6 +106,7 @@ public class PointerActivity extends Activity {
 					
 					if (end_nt) {
 						// end network thread
+						ds.close();
 						Log.d(tag, "Network thread ends.");
 						break;
 					}
