@@ -29,7 +29,7 @@ public class PointerActivity extends Activity {
 	private final int PORT = 50003;
 
 	private SensorManager sm;
-	private Sensor rv;
+	private Sensor gyro;
 	private RotationVectorListener rv_sel;
 
 	private DatagramSocket ds;
@@ -44,7 +44,6 @@ public class PointerActivity extends Activity {
 	private boolean end_nt;
 	private boolean init_host = true;
 
-	private TextView info;
 	private EditText host_text;
 	
 	private InputMethodManager imm;
@@ -55,13 +54,12 @@ public class PointerActivity extends Activity {
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.main);
-		info = (TextView) findViewById(R.id.info);
 		host_text = (EditText) findViewById(R.id.host_text);
 		
 		sm = (SensorManager) getSystemService(SENSOR_SERVICE);
 		// TODO provide support for gyroscope (rotation vector is flawed in early
 		// versions of android)
-		rv = sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+		gyro = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 
 		pm = (PowerManager) getSystemService(POWER_SERVICE);
 		wl = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, tag);
@@ -225,7 +223,7 @@ public class PointerActivity extends Activity {
 		super.onResume();
 
 		// reset orientation
-		sm.registerListener(rv_sel, rv, SensorManager.SENSOR_DELAY_FASTEST);
+		sm.registerListener(rv_sel, gyro, SensorManager.SENSOR_DELAY_FASTEST);
 		wl.acquire();
 	}
 

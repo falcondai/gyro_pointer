@@ -14,13 +14,6 @@ def main():
 	srv.bind(('', 50003))
 
 	print 'Pointer server established at', socket.gethostbyname(socket.gethostname())
-
-	# latest timestamp in received packet
-	ct = 0
-	# local time
-	lt = time.clock()
-	# reception/update frequency
-	uf = 0.0
 	
 	# screen resolution
 	W = win32api.GetSystemMetrics(0)
@@ -30,12 +23,27 @@ def main():
 	HR = 0.3
 	VR = float(H) / float(W) * HR
 	# low-pass filter parameters
-	ALPHA = 0.7
+	ALPHA = 1.0
 	
+	# initial state
 	# facing the screen the RH coordinate system where x points to the right
 	# and y points into the screen.
-	SCREEN_ORIENTATION = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
 	orientation_reset = True;
+	# latest timestamp in received packet
+	ct = 0
+	# local time
+	lt = time.clock()
+	# reception/update frequency
+	uf = 0.0
+	# rotation vector
+	rx = 0.0
+	ry = 0.0
+	rz = 0.0
+
+	# constants
+	ya = [[0.0],[1.0],[0.0]]
+	xa = [[1.0],[0.0],[0.0]]
+	epsilon = 1e-45
 	
 	# handle messages
 	while True:
@@ -43,10 +51,11 @@ def main():
 		# print 'From', addr, ':', data
 
 		# print 'From', addr, ':', struct.unpack('qfff', data)
-		t, x, y, z = struct.unpack('qfff', data)
+		t, ox, oy, oz = struct.unpack('qfff', data)
 
 		if t > ct:
 			# the packet is up to date
+			dt = t - ct
 			ct = t
 			
 			rt = time.clock()
@@ -56,28 +65,39 @@ def main():
 			# print x, y, z
 			
 			# detect message types
-			if x >= -1.0 and x <= 1.0:
+			if ox >= -1.0 and ox <= 1.0:
 				# rotation vector state message
 				
 				# convert the raw phone rot state to cursor position
 				# TODO use inertia and resistance to smooth the motion
 				
-				ya = [[0.0],[1.0],[0.0]]
-				xa = [[1.0],[0.0],[0.0]]
-				
 				if orientation_reset:
-					rot = rv_to_rot(x, y, z)
-					px = x
-					py = y
-					pz = z
-					SCREEN_ORIENTATION = mtranspose(rot)
+					# rot = rv_to_rot(x, y, z)
+					rx = 0.0
+					ry = 0.0
+					rz = 0.0
+					# SCREEN_ORIENTATION = mtranspose(rot)
 					orientation_reset = False
 				else:
+					# calculate the infinitesimal rotation vector
+					mag = math.sqrt(ox**2 + oy**2 + oz**2)
+					
+					if mag > epsilon:
+						ox /= mag
+						oy /= mag
+						oz /= mag
+						
+						sin = math.sin(mag * dt / 2.0)
+						x = ox * sin
+						y = oy * sin
+						z = oz * sin
+						x, y, z = uqmultiply((x,y,z), (rx,ry,rz))
+					
 					# low-pass filter the data
-					px = (1.0-ALPHA)*px + ALPHA*x
-					py = (1.0-ALPHA)*py + ALPHA*y
-					pz = (1.0-ALPHA)*pz + ALPHA*z
-					rot = rv_to_rot(px, py, pz)
+					rx = (1.0-ALPHA)*rx + ALPHA*x
+					ry = (1.0-ALPHA)*ry + ALPHA*y
+					rz = (1.0-ALPHA)*rz + ALPHA*z
+					rot = rv_to_rot(rx, ry, rz)
 					
 					ty = mmultiply(SCREEN_ORIENTATION, mmultiply(rot, ya))
 					if ty[1][0] > 0.0:
@@ -149,6 +169,15 @@ def mtranspose(a):
 		b.append(r)
 	return b
 
+def uqmultiply(a, b):
+	# unit quaternion multiplication
+	x1, y1, z1 = a
+	x2, y2, z2 = b
+	w1 = math.sqrt(1.0 - x1**2 - y1**2 - z1**2)
+	w2 = math.sqrt(1.0 - x2**2 - y2**2 - z2**2)
+	
+	return (w1*x2+w2*x1+y1*z2-z1*y2, w1*y2+w2*y1+z1*x2-x1*z2, w1*z2+w2*z1+x1*y2-y1*x2)
+	
 def rv_to_rot(x, y, z):
 	xx = x**2
 	yy = y**2
