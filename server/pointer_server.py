@@ -13,7 +13,7 @@ def main():
 	# srv.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 	srv.bind(('', 50003))
 
-	print 'Pointer server established.'
+	print 'Pointer server established at', socket.gethostbyname(socket.gethostname())
 
 	# latest timestamp in received packet
 	ct = 0
@@ -29,6 +29,8 @@ def main():
 	# TODO make configurations adjustable
 	HR = 0.3
 	VR = float(H) / float(W) * HR
+	# low-pass filter parameters
+	ALPHA = 0.7
 	
 	# facing the screen the RH coordinate system where x points to the right
 	# and y points into the screen.
@@ -60,20 +62,30 @@ def main():
 				# convert the raw phone rot state to cursor position
 				# TODO use inertia and resistance to smooth the motion
 				
-				rot = rv_to_rot(x, y, z)
 				ya = [[0.0],[1.0],[0.0]]
 				xa = [[1.0],[0.0],[0.0]]
-				ty = mmultiply(SCREEN_ORIENTATION, mmultiply(rot, ya))
 				
 				if orientation_reset:
+					rot = rv_to_rot(x, y, z)
+					px = x
+					py = y
+					pz = z
 					SCREEN_ORIENTATION = mtranspose(rot)
 					orientation_reset = False
-				elif ty[1][0] > 0.0:
-					# facing the screen
-					cx = ty[0][0] * W / 2.0 / HR + W / 2.0
-					cy = -ty[2][0] * H / 2.0 / VR + H / 2.0
-					# print 'cursor position:', cx, cy, 'update frequency:', uf
-					win32api.SetCursorPos((int(cx), int(cy)))
+				else:
+					# low-pass filter the data
+					px = (1.0-ALPHA)*px + ALPHA*x
+					py = (1.0-ALPHA)*py + ALPHA*y
+					pz = (1.0-ALPHA)*pz + ALPHA*z
+					rot = rv_to_rot(px, py, pz)
+					
+					ty = mmultiply(SCREEN_ORIENTATION, mmultiply(rot, ya))
+					if ty[1][0] > 0.0:
+						# facing the screen
+						cx = ty[0][0] * W / 2.0 / HR + W / 2.0
+						cy = -ty[2][0] * H / 2.0 / VR + H / 2.0
+						# print 'cursor position:', cx, cy, 'update frequency:', uf
+						win32api.SetCursorPos((int(cx), int(cy)))
 			
 			elif data[8:12] == '\x00\x00\x00\x40':
 				# mouse button event message
