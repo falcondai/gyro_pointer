@@ -105,7 +105,8 @@ def main():
 						cx = ty[0][0] * W / 2.0 / HR + W / 2.0
 						cy = -ty[2][0] * H / 2.0 / VR + H / 2.0
 						# print 'cursor position:', cx, cy, 'update frequency:', uf
-						win32api.SetCursorPos((int(cx), int(cy)))
+						# win32api.SetCursorPos((int(cx), int(cy)))
+						win32api.mouse_event(win32con.MOUSEEVENTF_MOVE|win32con.MOUSEEVENTF_ABSOLUTE, int(cx/W*65535.0), int(cy/H*65535.0))
 			
 			elif data[8:12] == '\x00\x00\x00\x40':
 				# mouse button event message
