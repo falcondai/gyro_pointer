@@ -20,7 +20,6 @@ import android.view.View.OnTouchListener;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
 
 public class PointerActivity extends Activity {
 	public static final String tag = "pointer";
@@ -31,6 +30,7 @@ public class PointerActivity extends Activity {
 	private SensorManager sm;
 	private Sensor gyro;
 	private RotationVectorListener rv_sel;
+	private float[] rv = { 0.0f, 0.0f, 0.0f };
 
 	private DatagramSocket ds;
 	private byte[] msg = new byte[8 + 3 * 4];
@@ -169,6 +169,7 @@ public class PointerActivity extends Activity {
 		((Button) findViewById(R.id.connect_btn)).setOnClickListener(
 				new OnClickListener() {
 					public void onClick(View v) {
+						rv[0] = 0.0f; rv[1] = 0.0f; rv[2] = 0.0f;
 						init_host = true;
 						imm.hideSoftInputFromWindow(v.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
 					}
@@ -177,7 +178,13 @@ public class PointerActivity extends Activity {
 
 	class RotationVectorListener implements SensorEventListener {
 		private long t = 0;
-		private long mt = 0;
+		private double dt = 0;
+//		private long mt = 0;
+		private float mag;
+		private float sin;
+		private float[] arv = new float[3];
+		private float[] brv = new float[3];
+		private final float EPSILON = (float) 1.0e-18;
 //		private String info_text;
 		
 		public long getLatestTimestamp() {
@@ -188,27 +195,38 @@ public class PointerActivity extends Activity {
 		public void onSensorChanged(SensorEvent se) {
 			if (t == 0) {
 				t = se.timestamp;
+			} else {
+	//			mt = (se.timestamp - t > mt) ? se.timestamp - t : mt;
+	//			info_text = "timestamp: "+String.valueOf(se.timestamp)+'\n'
+	//					+"sys timestamp: "+String.valueOf(System.nanoTime())+'\n'
+	//					+ String.valueOf(se.values[0])+'\n'
+	//					+ String.valueOf(se.values[1])+'\n'
+	//					+ String.valueOf(se.values[2])+'\n'
+	//					+ "magnitude: " + String.valueOf(magnitude(se.values))+'\n'
+	//					+ "update rate: "+ String.valueOf(1e9 / (se.timestamp - t))+"Hz\n"
+	//					+ "maximum wait time: "+String.valueOf(mt/1e6)+"ms\n";
+	//			info.setText(info_text);
+	//			Log.d(tag, sb.toString());
+				
+				dt = (se.timestamp - t) / 1.0e9;
+				mag = (float) Math.sqrt(se.values[0]*se.values[0]+se.values[1]*se.values[1]+se.values[2]*se.values[2]);
+				if (mag > EPSILON) {
+					arv[0] = se.values[0] / mag; arv[1] = se.values[1] / mag; arv[2] = se.values[2] / mag;
+					sin = (float) Math.sin(mag * dt / 2.0f);
+					arv[0] *= sin; arv[1] *= sin; arv[2] *= sin;
+					brv[0] = rv[0]; brv[1] = rv[1]; brv[2] = rv[2];
+					uqmultiply(arv, brv, rv);
+	
+					try {
+						// package the sensor event
+						packageSensorEvent(se.timestamp, rv, dp);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+				
+				t = se.timestamp;
 			}
-			mt = (se.timestamp - t > mt) ? se.timestamp - t : mt;
-//			info_text = "timestamp: "+String.valueOf(se.timestamp)+'\n'
-//					+"sys timestamp: "+String.valueOf(System.nanoTime())+'\n'
-//					+ String.valueOf(se.values[0])+'\n'
-//					+ String.valueOf(se.values[1])+'\n'
-//					+ String.valueOf(se.values[2])+'\n'
-//					+ "magnitude: " + String.valueOf(magnitude(se.values))+'\n'
-//					+ "update rate: "+ String.valueOf(1e9 / (se.timestamp - t))+"Hz\n"
-//					+ "maximum wait time: "+String.valueOf(mt/1e6)+"ms\n";
-//			info.setText(info_text);
-//			Log.d(tag, sb.toString());
-
-			try {
-				// package the sensor event
-				packageSensorEvent(se, dp);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			
-			t = se.timestamp;
 		}
 
 		@Override
@@ -251,14 +269,14 @@ public class PointerActivity extends Activity {
 		return (float) Math.sqrt(s);
 	}
 
-	protected void packageSensorEvent(SensorEvent se, DatagramPacket packet) {
+	protected void packageSensorEvent(long timestamp, float[] rv, DatagramPacket packet) {
 		byte[] buf = packet.getData();
-		writeByteBuffer(buf, 0, se.timestamp);
-		writeByteBuffer(buf, 8, se.values[0]);
-		writeByteBuffer(buf, 12, se.values[1]);
-		writeByteBuffer(buf, 16, se.values[2]);
+		writeByteBuffer(buf, 0, timestamp);
+		writeByteBuffer(buf, 8, rv[0]);
+		writeByteBuffer(buf, 12, rv[1]);
+		writeByteBuffer(buf, 16, rv[2]);
 		
-		ct = se.timestamp;
+		ct = timestamp;
 	}
 
 	protected void packageMouseButtonEvent(int button, int state, DatagramPacket packet) {
@@ -316,5 +334,15 @@ public class PointerActivity extends Activity {
 		for (int i = 0; i < 4; i++) {
 			buf[offset + i] = (byte) ((n >>> i * 8) & 0xff);
 		}
+	}
+	
+	// unit quaternion multiplication 
+	protected void uqmultiply(float[] a, float[] b, float[] c) {
+		float w1 = (float) Math.sqrt(1.0f - a[0]*a[0] - a[1]*a[1] - a[2]*a[2]);
+		float w2 = (float) Math.sqrt(1.0f - b[0]*b[0] - b[1]*b[1] - b[2]*b[2]);
+		
+		c[0] = w1 * b[0] + w2 * a[0] + a[1] * b[2] - a[2] * b[1];
+		c[1] = w1 * b[1] + w2 * a[1] + a[2] * b[0] - a[0] * b[2];
+		c[2] = w1 * b[2] + w2 * a[2] + a[0] * b[1] - a[1] * b[0];
 	}
 }

@@ -23,7 +23,7 @@ def main():
 	HR = 0.3
 	VR = float(H) / float(W) * HR
 	# low-pass filter parameters
-	ALPHA = 1.0
+	ALPHA = 0.6
 	
 	# initial state
 	# facing the screen the RH coordinate system where x points to the right
@@ -43,7 +43,6 @@ def main():
 	# constants
 	ya = [[0.0],[1.0],[0.0]]
 	xa = [[1.0],[0.0],[0.0]]
-	epsilon = 1e-45
 	
 	# handle messages
 	while True:
@@ -51,11 +50,10 @@ def main():
 		# print 'From', addr, ':', data
 
 		# print 'From', addr, ':', struct.unpack('qfff', data)
-		t, ox, oy, oz = struct.unpack('qfff', data)
+		t, x, y, z = struct.unpack('qfff', data)
 
 		if t > ct:
 			# the packet is up to date
-			dt = t - ct
 			ct = t
 			
 			rt = time.clock()
@@ -65,34 +63,20 @@ def main():
 			# print x, y, z
 			
 			# detect message types
-			if ox >= -1.0 and ox <= 1.0:
+			if x >= -1.0 and x <= 1.0:
 				# rotation vector state message
 				
 				# convert the raw phone rot state to cursor position
 				# TODO use inertia and resistance to smooth the motion
 				
 				if orientation_reset:
-					# rot = rv_to_rot(x, y, z)
+					rot = rv_to_rot(x, y, z)
 					rx = 0.0
 					ry = 0.0
 					rz = 0.0
-					# SCREEN_ORIENTATION = mtranspose(rot)
+					SCREEN_ORIENTATION = mtranspose(rot)
 					orientation_reset = False
 				else:
-					# calculate the infinitesimal rotation vector
-					mag = math.sqrt(ox**2 + oy**2 + oz**2)
-					
-					if mag > epsilon:
-						ox /= mag
-						oy /= mag
-						oz /= mag
-						
-						sin = math.sin(mag * dt / 2.0)
-						x = ox * sin
-						y = oy * sin
-						z = oz * sin
-						x, y, z = uqmultiply((x,y,z), (rx,ry,rz))
-					
 					# low-pass filter the data
 					rx = (1.0-ALPHA)*rx + ALPHA*x
 					ry = (1.0-ALPHA)*ry + ALPHA*y
