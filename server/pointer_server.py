@@ -24,6 +24,8 @@ def main():
 	VR = float(H) / float(W) * HR
 	# low-pass filter parameters
 	ALPHA = 0.6
+	# mouse wheel coefficient
+	WC = 10
 	
 	# initial state
 	# facing the screen the RH coordinate system where x points to the right
@@ -39,6 +41,10 @@ def main():
 	rx = 0.0
 	ry = 0.0
 	rz = 0.0
+	# wheel state
+	ws = False
+	u = 0.0
+	v = 0.0
 
 	# constants
 	ya = [[0.0],[1.0],[0.0]]
@@ -89,15 +95,15 @@ def main():
 						cx = ty[0][0] * W / 2.0 / HR + W / 2.0
 						cy = -ty[2][0] * H / 2.0 / VR + H / 2.0
 						# print 'cursor position:', cx, cy, 'update frequency:', uf
-						# win32api.SetCursorPos((int(cx), int(cy)))
+
 						win32api.mouse_event(win32con.MOUSEEVENTF_MOVE|win32con.MOUSEEVENTF_ABSOLUTE, int(cx/W*65535.0), int(cy/H*65535.0))
 			
 			elif data[8:12] == '\x00\x00\x00\x40':
 				# mouse button event message
 				
-				print data[12:20].split('\\')
+				# print data[12:20].split('\\')
 				button, state = struct.unpack('ii', data[12:20])
-				print 'mouse button event:', button, state
+				# print 'mouse button event:', button, state
 				
 				handle_mouse_button_event(button, state)
 			
@@ -106,7 +112,31 @@ def main():
 				
 				print 'reset orientation'
 				orientation_reset = True
+			
+			elif data[8:12] == '\x00\x00\x80\x40':
+				# mouse wheel start event
 				
+				u, v = struct.unpack('ff', data[12:20])
+				print 'mouse wheel event:', 'down', u, v
+				ws = True
+				
+			elif data[8:12] == '\x00\x00\xa0\x40':
+				# mouse wheel change event
+			
+				up, vp = struct.unpack('ff', data[12:20])
+				print 'mouse wheel event:', 'move', up, vp
+				du, dv = up - u, vp - v
+				u, v = up, vp
+				handle_mouse_wheel_event(WC * du, -WC * dv)
+								
+			elif data[8:12] == '\x00\x00\xc0\x40':
+				# mouse wheel end event
+			
+				up, vp = struct.unpack('ff', data[12:20])
+				print 'mouse wheel event:', 'up', up, vp
+				du, dv = up - u, vp - v
+				handle_mouse_wheel_event(WC * du, -WC * dv)
+				ws = False
 				
 def handle_mouse_button_event(button, state):
 	if button == 0:
@@ -125,6 +155,11 @@ def handle_mouse_button_event(button, state):
 		else:
 			win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, 0, 0)
 
+def handle_mouse_wheel_event(du, dv):
+	# horizontal wheel
+	win32api.mouse_event(4096, 0, 0, int(du))
+	win32api.mouse_event(win32con.MOUSEEVENTF_WHEEL, 0, 0, int(dv))
+			
 def mmultiply(a, b):
 	if len(a[0]) != len(b):
 		return None

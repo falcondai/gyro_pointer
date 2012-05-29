@@ -45,6 +45,7 @@ public class PointerActivity extends Activity {
 	private boolean init_host = true;
 
 	private EditText host_text;
+	private View scroll_area;
 	
 	private InputMethodManager imm;
 
@@ -55,6 +56,7 @@ public class PointerActivity extends Activity {
 
 		setContentView(R.layout.main);
 		host_text = (EditText) findViewById(R.id.host_text);
+		scroll_area = findViewById(R.id.scroll_area);
 		
 		sm = (SensorManager) getSystemService(SENSOR_SERVICE);
 		// TODO provide support for gyroscope (rotation vector is flawed in early
@@ -67,6 +69,7 @@ public class PointerActivity extends Activity {
 		imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
 		
 		// network thread
+		// TODO improve the packet dropping issue by async queue
 		nt = new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -172,6 +175,23 @@ public class PointerActivity extends Activity {
 						rv[0] = 0.0f; rv[1] = 0.0f; rv[2] = 0.0f;
 						init_host = true;
 						imm.hideSoftInputFromWindow(v.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
+					}
+				});
+		
+		// scroll listener
+		scroll_area.setOnTouchListener(
+				new OnTouchListener() {
+					@Override
+					public boolean onTouch(View v, MotionEvent me) {
+						if (me.getActionMasked() == MotionEvent.ACTION_DOWN) {
+							packageWheelEvent(0, me.getX(), me.getY(), dp);
+						} else if (me.getActionMasked() == MotionEvent.ACTION_MOVE) {
+							packageWheelEvent(1, me.getX(), me.getY(), dp);
+						} else if (me.getActionMasked() == MotionEvent.ACTION_UP) {
+							packageWheelEvent(2, me.getX(), me.getY(), dp);
+						}
+						Log.d(tag, String.valueOf(me.getActionMasked()));
+						return true;
 					}
 				});
 	}
@@ -295,6 +315,33 @@ public class PointerActivity extends Activity {
 		long timestamp = System.nanoTime();
 		writeByteBuffer(buf, 0, timestamp);
 		buf[8] = 0x00; buf[9] = 0x00; buf[10] = 0x40; buf[11] = 0x40;
+		
+		ct = timestamp;
+	}
+	
+	protected void packageWheelEvent(int state, float u, float v, DatagramPacket packet) {
+		byte[] buf = packet.getData();
+		long timestamp = System.nanoTime();
+		writeByteBuffer(buf, 0, timestamp);
+		buf[8] = 0x00; buf[9] = 0x00; buf[11] = 0x40;
+		switch (state) {
+		case 0:
+			// wheel start
+			buf[10] = (byte) 0x80;
+			break;
+		case 1:
+			// wheel change
+			buf[10] = (byte) 0xa0;
+			break;
+		case 2:
+			// wheel end
+			buf[10] = (byte) 0xc0;
+			break;
+		default:
+			break;
+		}
+		writeByteBuffer(buf, 12, u);
+		writeByteBuffer(buf, 16, v);
 		
 		ct = timestamp;
 	}

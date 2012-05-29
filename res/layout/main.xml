@@ -27,7 +27,17 @@
             android:text="Connect" />
     </LinearLayout>
 
+    <View
+        android:id="@+id/scroll_area"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/btn_bar"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/address_bar"
+        android:background="#333" />
+
     <LinearLayout
+        android:id="@+id/btn_bar"
         android:layout_width="match_parent"
         android:layout_height="150dp"
         android:layout_alignParentBottom="true" >

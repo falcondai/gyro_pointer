@@ -37,6 +37,9 @@ Message Types and Payload Design:
 	Rotation vector state: float x, float y, float z (each 4 bytes)
 	Mouse button event: float type = 2.0f (0x00, 0x00, 0x00, 0x40), int button (0 left, 1 middle, 2 right), int state (>0 UP otherwise DOWN)
 	Orientation reset: float type = 3.0f (0x00, 0x00, 0x40, 0x40)
+	Mouse wheel start event: float type = 4.0f (0x00, 0x00, 0x80, 0x40), float u, float v (finger position, only relative displacement is important for handling)
+	Mouse wheel change event: float type = 5.0f (0x00, 0x00, 0xa0, 0x40), float u, float v
+	Mouse wheel end event: float type = 6.0f (0x00, 0x00, 0xc0, 0x40), float u, float v
 
 Gesture Design:
 Pointer-like mapping of orientation to cursor position.
